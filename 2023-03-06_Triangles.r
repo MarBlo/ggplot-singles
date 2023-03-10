@@ -31,7 +31,7 @@ param <- list(
 )
 
 
-#' MAIN FUNCTION
+#' MAIN FUNCTION ----
 #'
 #' @description
 #'  * creates 24 plots in facets
