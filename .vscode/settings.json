@@ -20,5 +20,5 @@
     },
     "peacock.color": "#c122ff",
     "r.plot.useHttpgd": true,
-    "r.plot.defaults.fullWindowMode": false
+    "r.plot.defaults.fullWindowMode": true
 }

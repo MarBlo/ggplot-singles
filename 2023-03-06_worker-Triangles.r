@@ -33,7 +33,9 @@ many_greens <- c(
   "#bfd200", "#d4d700", "#dddf00", "#eeef20", "#ffff3f"
 )
 
-
+library(RColorBrewer)
+# mb_colour <- colorRampPalette(c("#fff7ec", "#7f0000"))
+mb_colour <- colorRampPalette(c("#7f0000", "#fff7ec"))
 
 #| Worker Functions  ----
 
@@ -113,38 +115,13 @@ drehen_dreieck <- function(data_f, winkel = 10, label = "") {
 
 schwerpunkt <- function(data_f) {
   df <- data_f |>
-    group_by(label) |>
+    group_by(label, rw) |>
     mutate(
       mp_x = 1 / 3 * sum(x),
       mp_y = 1 / 3 * sum(y)
     ) |>
     slice(1) |>
     select(mp_x, mp_y, label)
-  return(df)
-}
-
-#' seitenhalbierende
-#' calculats coordinates for seitenhalbierende
-#'
-#' @param data_f coordinates of Triangle
-#' @return DF with coordinates of seitenhalbierende
-#'
-
-seitenhalbierende <- function(data_f) {
-  #| zum plotten der seitenhalbierende mit geom_point
-  #| werden die Variablen x_2 und y_2 genommen
-  df <- data_f |>
-    mutate(x_2 = 0.5 * x, y_2 = 0.5 * y) |>
-    group_by(label) |>
-    group_modify(~ add_row(
-      x = NA,
-      y = NA,
-      x_2 = .x$x[2] + 0.5 * (.x$x[3] - .x$x[2]),
-      y_2 = .x$y[2] + 0.5 * (.x$y[3] - .x$y[2]),
-      .x
-    )) |>
-    select(c(label, x_2, y_2)) |>
-    filter(x_2 > 0)
   return(df)
 }
 
@@ -239,7 +216,7 @@ plot_f <- function(f, param) {
   }
 
   drei_e <- ggplot(f) +
-    geom_polygon(aes(x = x, y = y, fill = label), alpha = .9) +
+    geom_polygon(aes(x = x, y = y, fill = label), alpha = param$alpha) +
     { # nolint: brace_linter.
       if (param$mit_pathline) {
         geom_path(data = ff_path, aes(
@@ -251,14 +228,21 @@ plot_f <- function(f, param) {
       if (param$mit_schwerpunkt) {
         geom_point(
           data = sp, aes(x = mp_x, y = mp_y, color = label),
-          size = param$size
+          size = param$size / 5
         )
       }
     } +
-    scale_fill_pretty_d(param$color_pal) +
     { # nolint: brace_linter.
       if (param$own_col) {
-        scale_fill_manual(values = param$color_own)
+        # scale_fill_manual(values = param$color_own)
+        scale_fill_manual(values = mb_colour(30))
+      } else if (!param$own_col) {
+        scale_fill_pretty_d(param$color_pal)
+      }
+    } +
+    { # nolint: brace_linter.
+      if (param$with_facets) {
+        facet_wrap(~rw, ncol = 6)
       }
     } +
     facet_wrap(~rw, ncol = 6) +
@@ -278,12 +262,12 @@ plot_f <- function(f, param) {
   return(drei_e)
 }
 
-plot_single <- function(data_f, param) {
+plot_single <- function(f, param) {
   if (param$mit_schwerpunkt) {
     sp <- schwerpunkt(f)
   }
   if (param$mit_pathline) {
-    ff_path <- data_f |>
+    ff_path <- f |>
       group_by(label, rw) |>
       group_modify(~ add_row(
         x = 0,
@@ -292,8 +276,8 @@ plot_single <- function(data_f, param) {
       )) |>
       mutate(rw = ifelse(is.na(rw), lag(rw), rw))
   }
-  single_plot <- ggplot(data_f) +
-    geom_polygon(aes(x = x, y = y, fill = label), alpha = .2) +
+  eins_e <- ggplot(f) +
+    geom_polygon(aes(x = x, y = y, fill = label), alpha = param$alpha) +
     { # nolint: brace_linter.
       if (param$mit_pathline) {
         geom_path(data = ff_path, aes(
@@ -309,9 +293,13 @@ plot_single <- function(data_f, param) {
         )
       }
     } +
-    # scale_fill_pretty_d(param$color_pal) +
-    scale_fill_manual(values = my_cols) +
-    facet_wrap(~rw, ncol = 6) +
+    { # nolint: brace_linter.
+      if (param$own_col) {
+        scale_fill_manual(values = mb_colour(param$rotation + 1))
+      } else if (!param$own_col) {
+        scale_fill_pretty_d(param$color_pal)
+      }
+    } +
     coord_equal(xlim = c(-9, 9), ylim = c(-9, 9)) +
     theme_void() +
     guides(color = FALSE, fill = FALSE) +
@@ -320,10 +308,10 @@ plot_single <- function(data_f, param) {
       panel.background = element_rect(
         fill = param$color_back, color = NA
       ),
-      plot.margin = margin(1, 1, 1, 1, unit = "cm"),
-      strip.text = element_blank(),
-      panel.spacing = unit(.1, "lines")
+      plot.margin = margin(1, 1, 1, 1, unit = "cm")
     )
+
+  return(eins_e)
 }
 
 #| End functions ----
@@ -335,11 +323,12 @@ plot_single <- function(data_f, param) {
 #'      triangles
 #'  * This list is used to make a DF
 #' @param param
-#' @return ggplot with 24 facets
+#' @return ggplot with 24 facets or as single plot
 #' @details
 #'  * calls `make_triangles`
 #'    * which calls `make_dreieck`
 #'    * which calls `drehen_dreieck`
+#'  * calls plot_f
 #'
 
 grid_24_triangles <- function(param) {
@@ -355,51 +344,44 @@ grid_24_triangles <- function(param) {
   print(plot_f(df, param))
 }
 
-#| Experimentell ----
+#' triangles
+#'
+#' @description
+#'  * creates one single plots, no triangles given in param$rotation
+#' @param param, b_point, c_point (origin given at (0,0))
+#' @details
+#'  * starts with initial triangle
+#'  * calls `drehen_dreieck` as given in param$rotation
+#' @return ggplot
+#'
+triangles <- function(b_point, c_point, param) {
+  f <- tibble(
+    x = c(0, b_point[1], c_point[1]),
+    y = c(0, b_point[2], c_point[2]),
+    label = c("1", "1", "1"),
+    rn = letters[1:3]
+  ) |> column_to_rownames("rn")
 
-# f <- make_dreieck(b = b, c = c, label = "1")
+  tt <- NULL
+  f_0 <- f
+  rot <- param$rotation
+  for (i in seq(rot)) {
+    lab <- i + 1
+    tt <- drehen_dreieck(
+      f_0,
+      winkel = i * 10, label = as.character(lab)
+    )
+    f <- bind_rows(f, tt[4:6, ])
+  }
 
-# s_p <- readRDS(here::here("schöner_DF.rds"))
-# f <- s_p[1:3, 1:3]
-# tt <- NULL
-# f_0 <- f
-# # rot <- sample(1:20, 1)
-# rot <- 28
-# for (i in seq(rot)) {
-#   lab <- i + 1
-#   tt <- drehen_dreieck(
-#     f_0,
-#     winkel = i * 10, label = as.character(lab)
-#   )
-#   f <- bind_rows(f, tt[4:6, ])
-# }
-# ff <- f |>
-#   group_by(label) |>
-#   group_modify(~ add_row(
-#     x = 0,
-#     y = 0,
-#     .x
-#   )) |>
-#   mutate(rw = LETTERS[as.numeric(label)])
+  ff <- f |>
+    group_by(label) |>
+    group_modify(~ add_row(
+      x = 0,
+      y = 0,
+      .x
+    )) |>
+    mutate(rw = c(LETTERS, letters)[as.numeric(label)])
 
-
-# ggplot(ff) +
-#   geom_polygon(aes(x = x, y = y, fill = label), alpha = .8) +
-#   geom_path(aes(
-#     x = x, y = y, group = label
-#   ), color = "white", linewidth = 1.2) +
-#   # scale_fill_pretty_d(param$color_pal) +
-#   scale_fill_manual(values = many_greens) +
-#   # facet_wrap(~rw, ncol = 6) +
-#   coord_equal(xlim = c(-9, 9), ylim = c(-9, 9)) +
-#   theme_void() +
-#   guides(color = FALSE, fill = FALSE) +
-#   theme(
-#     plot.background = element_blank(),
-#     panel.background = element_rect(
-#       fill = "black", color = NA
-#     ),
-#     # plot.margin = margin(1, 1, 1, 1, unit = "cm"),
-#     strip.text = element_blank(),
-#     panel.spacing = unit(.1, "lines")
-#   )
+  print(plot_single(ff, param))
+}
