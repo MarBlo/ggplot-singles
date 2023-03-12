@@ -1,45 +1,7 @@
-#| Colors ----
-library(PrettyCols)
-my_cols <- c(
-  "#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84",
-  "#fc8d59", "#ef6548", "#d7301f", "#b30000",
-  "#7f0000", "#fff7ec", "#fee8c8", "#fdd49e",
-  "#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84",
-  "#fc8d59", "#ef6548", "#d7301f", "#b30000",
-  "#7f0000", "#fff7ec", "#fee8c8", "#fdd49e",
-  "#fff7ec", "#fee8c8", "#fdd49e", "#fdbb84",
-  "#fc8d59", "#ef6548", "#d7301f", "#b30000"
-)
-
-my_greens <- c(
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc",
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc",
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc",
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc",
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc",
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc",
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc",
-  "#22577a", "#38a3a5", "#57cc99", "#80ed99", "#c7f9cc"
-)
-
-many_greens <- c(
-  "#007f5f", "#2b9348", "#55a630", "#80b918", "#aacc00",
-  "#bfd200", "#d4d700", "#dddf00", "#eeef20", "#ffff3f",
-  "#007f5f", "#2b9348", "#55a630", "#80b918", "#aacc00",
-  "#bfd200", "#d4d700", "#dddf00", "#eeef20", "#ffff3f",
-  "#007f5f", "#2b9348", "#55a630", "#80b918", "#aacc00",
-  "#bfd200", "#d4d700", "#dddf00", "#eeef20", "#ffff3f",
-  "#007f5f", "#2b9348", "#55a630", "#80b918", "#aacc00",
-  "#bfd200", "#d4d700", "#dddf00", "#eeef20", "#ffff3f"
-)
-
-library(RColorBrewer)
-# mb_colour <- colorRampPalette(c("#fff7ec", "#7f0000"))
-mb_colour <- colorRampPalette(c("#7f0000", "#fff7ec"))
-
 #| Worker Functions  ----
 
-#' make_dreieck  erstellt DF für Dreiecke
+#' make_dreieck
+#' erstellt DF für Dreiecke
 #'
 #' @param origin of triangle
 #' @param b second point
@@ -60,7 +22,7 @@ make_dreieck <- function(origin = c(0, 0), b, c, label) {
   return(df)
 }
 
-
+#' drehen_dreieck
 #' Turns Triangle around origin
 #'
 #' @param data_f DF with coordinates
@@ -69,7 +31,8 @@ make_dreieck <- function(origin = c(0, 0), b, c, label) {
 #' @return  new DF with coordinates
 #'
 
-drehen_dreieck <- function(data_f, winkel = 10, label = "") {
+drehen_dreieck <- function(data_f, param, winkel, label = "") {
+  # winkel <- param$degrees
   dreh_winkel <- winkel # in degree
   if (nrow(data_f) > 3) {
     df_m <- as.matrix(data_f[4:6, -3])
@@ -175,7 +138,7 @@ make_triangles <- function(param) {
   for (i in seq(rot)) {
     lab <- i + 1
     tt <- drehen_dreieck(
-      f_0,
+      f_0, param,
       winkel = i * param$degrees, label = as.character(lab)
     )
     f <- bind_rows(f, tt[4:6, ])
@@ -232,21 +195,9 @@ plot_f <- function(f, param) {
         )
       }
     } +
-    { # nolint: brace_linter.
-      if (param$own_col) {
-        # scale_fill_manual(values = param$color_own)
-        scale_fill_manual(values = mb_colour(30))
-      } else if (!param$own_col) {
-        scale_fill_pretty_d(param$color_pal)
-      }
-    } +
-    { # nolint: brace_linter.
-      if (param$with_facets) {
-        facet_wrap(~rw, ncol = 6)
-      }
-    } +
+    scale_fill_manual(values = get_palette(param$rotation + 8)) +
     facet_wrap(~rw, ncol = 6) +
-    coord_equal(xlim = c(-9, 9), ylim = c(-9, 9)) +
+    coord_equal(xlim = c(-10, 10), ylim = c(-10, 10)) +
     theme_void() +
     guides(color = FALSE, fill = FALSE) +
     theme(
@@ -262,6 +213,21 @@ plot_f <- function(f, param) {
   return(drei_e)
 }
 
+#' plot_single
+#'
+#' @description
+#'  * plots one plot with as many triangles as defined
+#'      param$rotation
+#'
+#' @param param, dataframe
+#' @returns ggplot object
+#' @details
+#'  * get called by main function `triangle()`
+#'  * creates some `geom_`s if boolean is set TRUE in @param
+#'  * PrettyColors is an option
+#'  * calls `mit_schwerpunkt()` if TRUE in @param
+#'  * calls `mit_pathline()` if TRUE in @param
+#'
 plot_single <- function(f, param) {
   if (param$mit_schwerpunkt) {
     sp <- schwerpunkt(f)
@@ -276,8 +242,12 @@ plot_single <- function(f, param) {
       )) |>
       mutate(rw = ifelse(is.na(rw), lag(rw), rw))
   }
+  print(get_palette(param$rotation))
+
   eins_e <- ggplot(f) +
-    geom_polygon(aes(x = x, y = y, fill = label), alpha = param$alpha) +
+    geom_polygon(aes(x = x, y = y, fill = factor(rw)),
+      alpha = param$alpha
+    ) +
     { # nolint: brace_linter.
       if (param$mit_pathline) {
         geom_path(data = ff_path, aes(
@@ -288,19 +258,13 @@ plot_single <- function(f, param) {
     { # nolint: brace_linter.
       if (param$mit_schwerpunkt) {
         geom_point(
-          data = sp, aes(x = mp_x, y = mp_y, color = label),
-          size = param$size
+          data = sp, aes(x = mp_x, y = mp_y, color = "green"),
+          alpha = 1, size = param$size
         )
       }
     } +
-    { # nolint: brace_linter.
-      if (param$own_col) {
-        scale_fill_manual(values = mb_colour(param$rotation + 1))
-      } else if (!param$own_col) {
-        scale_fill_pretty_d(param$color_pal)
-      }
-    } +
-    coord_equal(xlim = c(-9, 9), ylim = c(-9, 9)) +
+    scale_fill_manual(values = get_palette(param$rotation + 3)) +
+    coord_equal(xlim = c(-10, 10), ylim = c(-10, 10)) +
     theme_void() +
     guides(color = FALSE, fill = FALSE) +
     theme(
@@ -311,7 +275,7 @@ plot_single <- function(f, param) {
       plot.margin = margin(1, 1, 1, 1, unit = "cm")
     )
 
-  return(eins_e)
+  return(list(f, eins_e))
 }
 
 #| End functions ----
@@ -351,7 +315,8 @@ grid_24_triangles <- function(param) {
 #' @param param, b_point, c_point (origin given at (0,0))
 #' @details
 #'  * starts with initial triangle
-#'  * calls `drehen_dreieck` as given in param$rotation
+#'  * calls `drehen_dreieck()` as given in param$rotation
+#'  * calls `single_plot()`
 #' @return ggplot
 #'
 triangles <- function(b_point, c_point, param) {
@@ -368,8 +333,8 @@ triangles <- function(b_point, c_point, param) {
   for (i in seq(rot)) {
     lab <- i + 1
     tt <- drehen_dreieck(
-      f_0,
-      winkel = i * 10, label = as.character(lab)
+      f_0, param,
+      winkel = i * param$degrees, label = as.character(lab)
     )
     f <- bind_rows(f, tt[4:6, ])
   }
@@ -384,4 +349,11 @@ triangles <- function(b_point, c_point, param) {
     mutate(rw = c(LETTERS, letters)[as.numeric(label)])
 
   print(plot_single(ff, param))
+  # return(ff)
 }
+
+
+
+
+#' Experimental ----
+##' make animation ----

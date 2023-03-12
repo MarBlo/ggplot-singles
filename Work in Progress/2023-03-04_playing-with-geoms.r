@@ -63,6 +63,8 @@ ggplot(v) +
 
 
 
+
+
 # u + v = w
 (len_u <- sqrt(sum(u^2))) # length == Euclidean norm
 (len_v <- sqrt(sum(v^2))) # length == Euclidean norm
@@ -162,18 +164,6 @@ ggplot(pm) +
     arrow = arrow(length = unit(.5, "cm"))
   ) +
   coord_equal()
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 coord_y_y <- l_y * sin(angle_rad)
