@@ -11,10 +11,9 @@ source(here::here("colors.r"))
 param <- list(
   #' makes 24 plots each with several triangles
   #' angle between triangles
-  with_facets = FALSE,
-  degrees = 20,
+  degrees = 15,
   #' number of rotations, shouldn`t be more than 360/degrees
-  rotation = 14,
+  rotation = 18,
   #' coordinates of points b and c
   x_point_b = c(4, 9),
   y_point_b = c(1, 6),
@@ -34,7 +33,6 @@ param <- list(
 
 #' MAIN FUNCTIONs ----
 #'
-
 ##' grid_24_triangels ----
 #'
 #' @description
@@ -52,7 +50,7 @@ grid_24_triangles(param)
 #'  * creates on plot with any many triangles as given in param$rotation
 #' @param param, b_point, c_point
 #' @details
-#'  * origing at (0,0), b_point & c_point must be given in fct call
+#'  * origin at (0,0), b_point & c_point must be given in fct call
 #'  * calls plot_single
 #'
 triangles(b_point = c(9, 0), c_point = c(5, 5), param)
@@ -62,21 +60,38 @@ triangles(b_point = c(9, 0), c_point = c(5, 5), param)
 ##' make animation ----
 
 
-# plots <- vector("list")
-# for (i in seq(10)) {
-#   param$rotation <- i
-#   temp <- triangles(b_point = c(9, 2), c_point = c(1, 5), param)
-#   temp$rr <- letters[i]
-#   plots[[i]]  <- temp
-# }
-# plots[[1]]
+plots <- vector("list")
+for (i in seq(10)) {
+  param$rotation <- i
+  temp <- triangles(b_point = c(9, 2), c_point = c(1, 5), param)
+  temp$rr <- letters[i]
+  plots[[i]] <- temp
+}
+plots[[10]][[2]]
 
-# library(gganimate)
-# anim_df <- bind_rows(plots)
+library(gganimate)
+anim_df <- bind_rows(plots)
 
-# pp <- plot_single(anim_df, param)
-# anim <- pp + transition_states(rr,
-#                     transition_length = 2,
-#                     state_length = 1)
+pp <- plot_single(anim_df, param)[[2]]
+anim <- pp + transition_states(rr,
+  transition_length = .1,
+  state_length = 1
+)
 # anim
-# animate(anim, renderer = gifski_renderer())
+animate(anim, renderer = gifski_renderer())
+anim_save("plot_a.gif")
+
+
+deg <- c(10, 15, 20, 24, 30)
+rot <- 360 / deg
+
+
+
+#'
+#'
+
+for (d in seq(deg)) {
+  param$degrees <- deg[d]
+  param$rotation <- rot[d]
+  triangles(b_point = c(9, 0), c_point = c(5, 5), param)
+}

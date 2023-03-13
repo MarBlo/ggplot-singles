@@ -242,7 +242,6 @@ plot_single <- function(f, param) {
       )) |>
       mutate(rw = ifelse(is.na(rw), lag(rw), rw))
   }
-  print(get_palette(param$rotation))
 
   eins_e <- ggplot(f) +
     geom_polygon(aes(x = x, y = y, fill = factor(rw)),
@@ -357,3 +356,17 @@ triangles <- function(b_point, c_point, param) {
 
 #' Experimental ----
 ##' make animation ----
+
+#' triangles(
+#'  b_point, c_point, winkel, rotation,
+#'  mit_schwerpunkt, mit_pathline, alpha,
+#' linewidth, size, degrees, color_back
+#' )
+
+#' drehen_dreieck(
+#'  f_0, winkel,
+#' )
+#'
+#' plot_single(
+#'  f, mit_schwerpunkt, mit_pathline, alpha, linewidth, size, color_back
+#' )
