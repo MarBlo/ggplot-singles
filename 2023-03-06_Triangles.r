@@ -32,7 +32,7 @@ param <- list(
 )
 
 #' MAIN FUNCTIONs ----
-#'
+
 ##' grid_24_triangels ----
 #'
 #' @description
@@ -42,7 +42,10 @@ param <- list(
 #' @details
 #'  * first call is to `make_triangles`
 #'
-grid_24_triangles(param)
+p <- grid_24_triangles(param)
+# ggsave(p, "plot_b.png")
+
+
 
 ##' triangles ----
 #'
@@ -82,16 +85,23 @@ animate(anim, renderer = gifski_renderer())
 anim_save("plot_a.gif")
 
 
+#'
+#'
+plots_degree <- vector("list")
 deg <- c(10, 15, 20, 24, 30)
 rot <- 360 / deg
-
-
-
-#'
-#'
-
 for (d in seq(deg)) {
   param$degrees <- deg[d]
   param$rotation <- rot[d]
-  triangles(b_point = c(9, 0), c_point = c(5, 5), param)
+  temp <- triangles(b_point = c(9, 0), c_point = c(5, 5), param)[[1]]
+  plots_degree[[d]] <- temp
 }
+df <- bind_rows(plots_degree)
+head(df, 20)
+unique(df$rw)
+unique(df$label)
+nrow(df)
+
+ggplot(df) +
+  geom_path(aes(x, y)) +
+  facet_grid(~rw)

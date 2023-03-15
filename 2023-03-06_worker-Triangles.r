@@ -177,7 +177,9 @@ plot_f <- function(f, param) {
       )) |>
       mutate(rw = ifelse(is.na(rw), lag(rw), rw))
   }
-
+  lims <- ceiling(max(max(f$x), max(f$y)))
+  #' change to numeric factor for making colors in sequence
+  f$label <- as.factor(as.numeric(f$label))
   drei_e <- ggplot(f) +
     geom_polygon(aes(x = x, y = y, fill = label), alpha = param$alpha) +
     { # nolint: brace_linter.
@@ -197,7 +199,7 @@ plot_f <- function(f, param) {
     } +
     scale_fill_manual(values = get_palette(param$rotation + 8)) +
     facet_wrap(~rw, ncol = 6) +
-    coord_equal(xlim = c(-10, 10), ylim = c(-10, 10)) +
+    coord_equal(xlim = c(-lims, lims), ylim = c(-lims, lims)) +
     theme_void() +
     guides(color = FALSE, fill = FALSE) +
     theme(
@@ -205,7 +207,7 @@ plot_f <- function(f, param) {
       panel.background = element_rect(
         fill = param$color_back, color = NA
       ),
-      plot.margin = margin(1, 1, 1, 1, unit = "cm"),
+      plot.margin = margin(0, 0, 0, 0, unit = "cm"),
       strip.text = element_blank(),
       panel.spacing = unit(.1, "lines")
     )
@@ -305,6 +307,7 @@ grid_24_triangles <- function(param) {
 
   df <- bind_rows(plot_lst)
   print(plot_f(df, param))
+  return(df)
 }
 
 #' triangles
